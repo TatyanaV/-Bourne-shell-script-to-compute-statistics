@@ -1,0 +1,222 @@
+#!/bin/bash
+
+#-**************************************************************************************************************
+# Tatyana Vlaskin (vlaskint@onid.oregonstate.edu)
+# CS344 Spring 2015
+# Program 1
+# Filename: stats
+# Description: This is a Bourne shell scrip that calculates average and median 
+#			   across the rows or down the columns from an input file or stdin.
+#			   The results are displayed to standard output in the form of a 
+#			   table.
+#to run my script on the flip server, i had to run the following command:
+# sed -i -e 's/\r$//' stats
+# a lot of code and ideas are taken from the canvas discussion board, especially 
+# from the comments of Kevin To
+#https://github.com/hinesro/cs344/blob/master/assignment1/stats
+#http://compgroups.net/comp.unix.shell/bourne-shell-script-newbie-help/1209431
+#-**************************************************************************************************************
+
+
+#-**************************************************************************************************************
+function median {
+# Purpose:  This function receives a sequence of numbers, finds and returns the median 
+#https://panoskrt.wordpress.com/2009/03/10/shell-script-for-standard-deviation-arithmetic-mean-and-median/
+#-**************************************************************************************************************
+	# making sure that at least one number was passed to the function.
+	#http://www.dreamsyssoft.com/unix-shell-scripting/ifelse-tutorial.php
+	#The Test command is often used in control flows. It returns 0 if something 
+	#is true, and non-zero if it is false. Statements such as the "if" command are 
+	#a great place to make use of this
+	#http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_03
+	
+	#if $#, which is number of arguments is less than 1, return 1 and terminate if statement
+	if test $# -lt 1; then
+		return 1
+	fi
+
+	# Store the input numbers in the variables name sequence
+	local sequence=$@
+
+	# Store the length of the sequence in a variable called count
+	local count=$#
+
+	# The median will be found by sorting numbers in the ascending order and finding
+	#the middle number in the sequence. If there is an even # of #s, larger number will be used
+	#for a median [ larger # is closer to the tail], idea is taken from the canvas discussion board
+	#http://unix.stackexchange.com/questions/13731/is-there-a-way-to-get-the-min-max-median-and-average-of-a-list-of-numbers-in
+	#http://stackoverflow.com/questions/6166375/median-of-column-with-awk
+	local shift_from_head=$(expr $count / 2 + 1)
+	#http://stackoverflow.com/questions/7971750/using-combination-of-head-and-tail-to-display-middle-line-of-the-file-in-uni
+	local median=$(for num in $sequence; do echo $num; done | sort -n | head -$shift_from_head | tail -1)
+	echo $median
+}
+
+#-**************************************************************************************************************
+function average {
+# Purpose:  This function receives a sequence of numbers, finds and returns the average
+#https://nixshell.wordpress.com/2007/03/26/calculating-averages/
+#https://panoskrt.wordpress.com/2009/03/10/shell-script-for-standard-deviation-arithmetic-mean-and-median/
+#-**************************************************************************************************************
+	# making sure that at least one number was passed to the function.
+	#http://www.dreamsyssoft.com/unix-shell-scripting/ifelse-tutorial.php
+	#The Test command is often used in control flows. It returns 0 if something 
+	#is true, and non-zero if it is false. Statements such as the "if" command are 
+	#a great place to make use of this
+	#http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_05_03
+	
+	if test $# -lt 1; then
+		return 1
+	fi
+
+	# if there is at least one number was passed to the function
+	#Store the input numbers in a variable sequence
+	#http://www.grymoire.com/Unix/Sh.html, I am storing all positional parameters with spaces
+	local sequence=$@
+
+	# Store the length of the sequence in a variable count.
+	local number_columns=$#
+
+	# Sum the numbers in the sequence, this is taken from the sum loop presented in the lecture
+	#for loop examples http://bash.cyberciti.biz/guide/For_loop
+	local sum=0
+	for num in $sequence; do
+		sum=$(expr $sum + $num)
+	done
+
+	# Calculate the average
+	local average_calculation=$(expr $sum / $number_columns)
+
+	# If the relative remainder is greater than or equal to .5 then round the average up.
+	#i do not want to deal with floating numbers, right now, so Ill multiply 0.5 by 100 and will 
+	#check if remainder is greater or equal to 50
+	local remainder=$(expr $sum % $number_columns \* 100 / $number_columns)
+	if test $remainder -ge 50; then
+		local average_calculation=$(expr $average_calculation + 1)
+	fi
+	echo $average_calculation
+}
+
+#-**************************************************************************************************************
+# Main Function
+
+# Create two temp files. One will be used to store the data that is manipulate
+# the second file will be a copy needed when data is the input and output of the 
+#operation. The name of the tem file will include the shell's process id per assignment request
+temporary_data=pid$$_temporary
+temporary_data_2=pid$$_temporary_2
+touch $temporary_data $temporary_data_2
+
+# making sure that the temporary files were created in the current directory
+if test ! -e $temporary_data -o ! -e $temporary_data_2; then
+	echo "stats: unable to create temporary files" 1>&2
+	exit 1
+fi
+
+#Set up temp file delete trap for interrupt, hangup, and terminate signals 
+#code is taken from the lecture
+trap "rm -f $temporary_data $temporary_data_2" INT HUP TERM EXIT QUIT
+
+#now lets start looking at the users input
+# any word beginning with a lower-case r will be taken as a row-- will be looking for -r
+#any word beginning with a lower-case c will be taken as a column-- will be looking for -c
+#http://www.grymoire.com/Unix/Sh.html, will be checking only 1st 2 characters
+request=${1:0:2} 
+input_file=$2
+
+#ALL THE ERROR HANDLING WAS TAKEN FROM THE LECTURES- the conditions were modified
+# making sure that the program received at least one and no more than two arguments.
+if test $# -lt 1 -o $# -gt 2; then
+	#when we want to redirect both stdout and stderr to the same location, 
+	# >& is used – it points one file descriptor to another.
+	echo "Usage message: stats {-rows|-cols} [file]" 1>&2
+	exit 1
+fi
+
+# making sure that the row/columns start with -r or -c 
+if test $request != "-r" -a $request != "-c"; then
+	echo "Usage message: stats {-rows|-cols} [file]" 1>&2
+	exit 1
+fi
+
+# making sure that the specified file exists and is readable
+if test $# -eq 2 && test ! -r $input_file; then
+	echo "stats: cannot read $input_file" 1>&2
+	exit 1
+fi
+
+
+# if the user does not indicate the input file, read from stdin, and write to the temp data file.
+if test $# -ne 2; then
+	while read line; do
+		echo $line >> $temporary_data
+	done
+
+# if the user indicated the input file, copy it to temp file to make sure that it remains unmodified
+else
+	cat $input_file > $temporary_data
+fi
+
+#making sure that provided file is not empty
+#canvas discussion board
+if test $(wc -w < $temporary_data) -lt 1; then
+	echo "stats: no input data was provided" 1>&2
+	exit 1
+fi
+
+#makig sure that input file has correct data type--only integers are allowed
+#http://stackoverflow.com/questions/806906/how-do-i-test-if-a-variable-is-a-number-in-bash
+for datum in $(cat $temporary_data); do
+	# remove all digits from the unix script: http://www.cyberciti.biz/faq/sed-remove-all-digits-input-from-input/
+	# if any characters are left- this is an indication that there is an invalid character
+	if test $(echo $datum | sed s/[0-9]//g); then
+		echo "stats: noninteger present in the input" 1>&2
+		exit 1
+	fi
+done
+
+# display results
+#if the user wants to see statistics for rows
+if test $request = "-r"; then
+	echo -e "Average\tMedian"
+	# Calculate and display the average and median for each row, result go to temp file
+	#loop is taken from the lecture notes
+	while read line; do
+		average_calculation=$(average $line)
+		median=$(median $line)
+		echo -e "$average_calculation\t$median"
+	done < $temporary_data
+#if the user wants to see statistics for columns	
+else 
+	# Replace each sequence of blanks between numbers with a single space and remove
+	# leading space characters from lines to align fields for the cut command
+	#http://askubuntu.com/questions/304999/not-able-to-execute-a-sh-file-bin-bashm-bad-interpreter
+	sed "s/[ \t]\+/ /g" < $temporary_data | sed "s/^ //g" > $temporary_data_2
+	cat $temporary_data_2 > $temporary_data
+
+	# Determine the number of columns
+	number_columns=$(head -1 $temporary_data | wc -w)
+	
+	#average calculation for columns
+	echo "Averages:"
+	i=1
+	#http://tldp.org/HOWTO/Bash-Prog-Intro-HOWTO-7.html
+	while test $i -lt $number_columns; do
+		echo -n -e "$(average $(cut -f$i -d' ' < $temporary_data))\t"
+		i=$(expr $i + 1)
+	done
+	echo $(average $(cut -f$i -d' ' < $temporary_data)) 
+	
+	#media calculation for columns
+	echo "Medians:"
+	i=1
+	#http://tldp.org/HOWTO/Bash-Prog-Intro-HOWTO-7.html
+	while test $i -lt $number_columns; do
+		echo -n -e "$(median $(cut -f$i -d' ' < $temporary_data))\t"
+		i=$(expr $i + 1)
+	done
+	echo $(median $(cut -f$i -d' ' < $temporary_data)) 
+fi
+
+exit 0 
+#-**************************************************************************************************************
