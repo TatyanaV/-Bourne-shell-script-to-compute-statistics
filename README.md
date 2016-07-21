@@ -1,12 +1,11 @@
 # -Bourne-shell-script-to-compute-statistics
-This assignment asks you to write a Bourne shell script to compute statistics.  The purpose is to get you familiar with the Unix shell, shell programming, Unix utilities, standard input, output, and error, pipelines, process ids, exit values, and signals.
+This is a Bourne shell script to compute statistics.  The purpose is to get familiar with the Unix shell, shell programming, Unix utilities, standard input, output, and error, pipelines, process ids, exit values, and signals.
 
-What you’re going to submit is your script, called stats.
-Overview
+#Overview
 
-NOTE: For this assignment, make sure that you are using Bash as your shell (on Linux, /bin/sh is Bash, but on other Unix O/S, it is not). This is because the Solaris version of Bourne shell has some annoying bugs that are really brought out by this script. Bash can execute any /bin/sh script.
+NOTE: make sure that you are using Bash as your shell (on Linux, /bin/sh is Bash, but on other Unix O/S, it is not). This is because the Solaris version of Bourne shell has some annoying bugs that are really brought out by this script. Bash can execute any /bin/sh script.
 
-In this assignment you will write a Bourne shell script to calculate averages and medians from an input file of numbers.  This is the sort of calculation I might do when figuring out the grades for this course. The input file will have whole number values separated by tabs, and each line of this file will have the same number of values.  (For example, each row might be the scores of a student on assignments.)  Your script should be able to calculate the average and median across the rows (like I might do to calculate an individual student's course grade) or down the columns (like I might do to find the average score on an assignment).
+This Bourne shell script calculates averages and medians from an input file of numbers.  This is the sort of calculation someone might do when thye are figuring out the grades for the course. The input file will have whole number values separated by tabs, and each line of this file will have the same number of values.  (For example, each row might be the scores of a student on assignments.)  Your script should be able to calculate the average and median across the rows (like I might do to calculate an individual student's course grade) or down the columns (like I might do to find the average score on an assignment).
 
 You will probably need commands like these, so please read up on them: sh, read, expr, cut, head, tail, wc, and sort.
 
@@ -65,7 +64,7 @@ Here is a sample run of what your script might return, using an input file calle
 % echo $?
  1
 
-Specifications 
+#Specifications 
 
 You must check for the right number and format of arguments to stats. You should allow users to abbreviate -rows and -cols; any word beginning with a lowercase r is taken to be rows and any word beginning with a lowercase c is taken to be cols.  So, for example, you would get averages and medians across the rows with -r, -rowwise and -rumplestiltskin, but not -Rows.  If the command has too many or two few arguments or if the arguments of the wrong format you should output an error message to standard error.  You should also output an error message to standard error if the input file is specified, but it is not readable.
 
@@ -92,7 +91,7 @@ This script is the very one that will be used to assign your script a grade. To 
 p1cleantestscriptView in a new window
 
 The p1gradingscript itself is a good resource for seeing how some of the more complex shell scripting commands work, too.
-Hints
+#Hints
 
 One problem that will be especially challenging is to read in the values from a specified file.  The read command is exactly what you need (see the man page for read).  However, read is meant to read from standard input and the input file is not necessarily standard input to the stats command.  You will have to figure out how to get read to read from a file. The man page for sh has the information you need to figure this out.
 
